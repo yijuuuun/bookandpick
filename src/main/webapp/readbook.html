@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head> 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>책 진행률 추적</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+
+    body {
+        font-family: 'Nanum Gothic', sans-serif;
+        background-color: #f4f7f6;
+        text-align: center;
+        padding: 20px;
+        color: #333;
+    }
+
+    .container {
+        margin-top: 50px;
+    }
+
+    h1 {
+        font-size: 2rem;
+        color: #007bff;
+        margin-bottom: 30px;
+    }
+
+    .mb-4 {
+        margin-bottom: 20px !important;
+    }
+
+    .form-control {
+        font-size: 0.9rem;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+
+    .btn {
+        font-size: 0.9rem;
+        padding: 8px 20px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    .btn-outline-success {
+        color: #28a745;
+        border-color: #28a745;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #28a745;
+        color: #fff;
+    }
+
+    .btn-outline-primary {
+        color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .book {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 15px auto;
+        background: #fff;
+        text-align: left;
+        max-width: 700px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .book img {
+        max-width: 120px;
+        border-radius: 5px;
+        float: left;
+        margin-right: 15px;
+    }
+
+    .book h3 {
+        font-size: 1.5rem;
+        margin-top: 0;
+        color: #333;
+    }
+
+    .progress {
+        height: 20px;
+        background-color: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background-color: #007bff;
+        transition: width 0.4s ease;
+    }
+
+    section#main .btn {
+        margin: 10px;
+    }
+
+    #main .btn {
+        font-size: 0.85rem;
+        padding: 8px 16px;
+    }
+
+    #main {
+        margin-top: 30px;
+    }
+</style>
+
+</head>
+
+<body>
+    <div class="container">
+        <h1>📚Book and pick과 함께 책 읽어요!</h1>
+
+        <!-- 책 검색 -->
+        <div class="mb-4">
+            <input id="book-title-input" type="text" placeholder="책 제목 또는 저자를 입력하세요" class="form-control"
+                style="max-width: 300px; margin: auto;">
+            <button id="search-book" class="btn btn-success mt-2">책 검색</button>
+        </div>
+
+        <!-- 책 정보 -->
+        <div class="book" id="book-info" style="display: none;">
+            <img id="book-image" src="#" alt="책 이미지">
+            <div>
+                <h3 id="book-title">책 제목</h3>
+                <p id="book-author">저자: </p>
+                <p id="book-pages">총 페이지: <span id="total-pages">-</span></p>
+                <p>현재 페이지: <span id="current-page">0</span></p>
+                <p>진행률: <span id="progress-percentage">0%</span></p>
+                <div class="progress">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+                </div>
+                <br>
+                <!-- 페이지 업데이트 -->
+                <input id="page-input" type="number" placeholder="읽은 페이지 입력" class="form-control"
+                    style="max-width: 300px; margin: auto;">
+                <button id="update-progress" class="btn btn-primary mt-2">진행률 업데이트</button>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Books API 키
+        const API_KEY = "AIzaSyBPoB0Du6z_Hm06dtbv0tF6DJhnfW1A2vs";
+
+        // 책 정보
+        const book = {
+            title: "",
+            author: "",
+            totalPages: 0,
+            currentPage: 0
+        };
+
+        // DOM 요소
+        const bookInfo = document.getElementById("book-info");
+        const bookTitleInput = document.getElementById("book-title-input");
+        const searchBookButton = document.getElementById("search-book");
+        const bookTitleElement = document.getElementById("book-title");
+        const bookAuthorElement = document.getElementById("book-author");
+        const bookPagesElement = document.getElementById("book-pages");
+        const bookImageElement = document.getElementById("book-image");
+        const totalPagesElement = document.getElementById("total-pages");
+        const currentPageElement = document.getElementById("current-page");
+        const progressPercentageElement = document.getElementById("progress-percentage");
+        const progressBarElement = document.getElementById("progress-bar");
+        const pageInputElement = document.getElementById("page-input");
+        const updateProgressButton = document.getElementById("update-progress");
+
+        // 책 검색
+        searchBookButton.addEventListener("click", async () => {
+            const title = bookTitleInput.value.trim();
+            if (title === "") {
+                alert("책 제목과 저자를 입력하세요!");
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${title}&key=${API_KEY}`);
+                const data = await response.json();
+                if (data.items && data.items.length > 0) {
+                    const bookData = data.items[0].volumeInfo;
+                    book.title = bookData.title || "제목 없음";
+                    book.author = (bookData.authors && bookData.authors.join(", ")) || "저자 정보 없음";
+                    book.totalPages = bookData.pageCount || 0;
+
+                    // 책 정보 업데이트
+                    bookTitleElement.textContent = book.title;
+                    bookAuthorElement.textContent = `저자: ${book.author}`;
+                    totalPagesElement.textContent = book.totalPages > 0 ? book.totalPages : "정보 없음";
+                    bookImageElement.src = bookData.imageLinks ? bookData.imageLinks.thumbnail : "#";
+                    bookImageElement.alt = book.title;
+
+                    // 진행률 초기화
+                    book.currentPage = 0;
+                    updateProgress();
+
+                    // 책 정보 표시
+                    bookInfo.style.display = "block";
+                } else {
+                    alert("책 정보를 찾을 수 없습니다!");
+                }
+            } catch (error) {
+                console.error("Error fetching book data:", error);
+                alert("책 정보를 가져오는 데 실패했습니다.");
+            }
+        });
+
+        // 진행률 업데이트
+        const updateProgress = () => {
+            const percentage = book.totalPages > 0
+                ? Math.min((book.currentPage / book.totalPages) * 100, 100).toFixed(2)
+                : 0;
+            currentPageElement.textContent = book.currentPage;
+            progressPercentageElement.textContent = `${percentage}%`;
+            progressBarElement.style.width = `${percentage}%`;
+
+            // 진행률 100%일 때 다음 페이지로 이동
+            if (percentage === "100.00") {
+                alert("이 책을 완독하셨습니다. 축하드립니다!");
+            }
+        };
+
+        // 진행률 업데이트 버튼 클릭 이벤트
+        updateProgressButton.addEventListener("click", () => {
+            const enteredPage = parseInt(pageInputElement.value, 10);
+            if (!isNaN(enteredPage) && enteredPage >= 0 && enteredPage <= book.totalPages) {
+                book.currentPage = enteredPage;
+                updateProgress();
+            } else {
+                alert("유효한 페이지 수를 입력하세요!");
+            }
+        });
+    </script>
+    
+    <div class="container">
+        <section id="main" class="mx-auto my-5 py-5 px-3">
+            <p style="color: #F96791;">
+            </p>
+
+          
+           <button id="boardBtn" type="button" class="btn btn-outline-success mt-3" onclick="goToboard()"  ">책 리뷰게시판 </button>
+             <button id="profileBtn" type="button" class="btn btn-outline-success mt-3" onclick="goToprofile()"  ">내 프로필 보러가기 </button> 
+             <button id="logoutBtn" type="button" class="btn btn-outline-primary mt-3" onclick="logout()">로그아웃</button>
+            <button id="goToMain" type="button" class="btn btn-outline-success mt-3" onclick="goToMain()"> 메인페이지로 가기</button>
+        </section>
+    </div>
+</body>
+
+</html>
+ <script src="js/start.js"></script>
